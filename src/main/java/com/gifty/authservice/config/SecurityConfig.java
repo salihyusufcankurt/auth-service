@@ -30,7 +30,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable()) // CSRF korumasını devre dışı bırakıyoruz
                 .authorizeHttpRequests(auth -> auth
                         // Herkese açık endpoint'ler
-                        .requestMatchers("/", "/auth/register", "/auth/login", "/h2-console/**", "/auth/refresh-token").permitAll()
+                        .requestMatchers( "/auth/register", "/auth/login", "/h2-console/**", "/token/refresh", "/token/validate").permitAll()
                         .requestMatchers("/auth/logout","/auth/logout-from-all-devices").authenticated() // Logout için doğrulama gereksinimi
 
                         // Diğer tüm endpoint'ler kimlik doğrulama gerektirir
@@ -55,7 +55,7 @@ public class SecurityConfig {
                 )
                 // OAuth2 Login yapılandırması
                 .oauth2Login(oauth2 -> oauth2
-                        .loginPage("/auth/login") // OAuth giriş işlemi için özel bir giriş sayfası
+                        .loginPage("/auth/oauth") // OAuth giriş işlemi için özel bir giriş sayfası
                         .defaultSuccessUrl("/auth/success", true) // Başarılı giriş sonrası yönlendirme
                         .failureUrl("/auth/failure") // Başarısız giriş sonrası yönlendirme
                 );
