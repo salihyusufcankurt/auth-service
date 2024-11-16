@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 
 @Component
@@ -30,8 +31,15 @@ public class JwtUtil {
     }
 
     public String generateAccessToken(String username, Map<String, Object> claims) {
+        // Mutable bir Map oluşturun
+        Map<String, Object> mutableClaims = new HashMap<>();
+        if (claims != null) {
+            mutableClaims.putAll(claims); // Immutable map'i mutable bir kopyaya alın
+        }
+
+        mutableClaims.put("type", "access"); // Token türü: Access
         return Jwts.builder()
-                .setClaims(claims)
+                .setClaims(mutableClaims) // Mutable map'i kullanın
                 .setSubject(username)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + accessTokenValidity))
