@@ -5,5 +5,5 @@ import lombok.Data;
 @Data
 public class LogoutDTO {
     private String username;
-    private String deviceId;
+    private String deviceName;
 }

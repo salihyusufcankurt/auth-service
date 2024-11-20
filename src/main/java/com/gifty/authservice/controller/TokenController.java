@@ -4,6 +4,7 @@ import com.gifty.authservice.service.TokenService;
 import com.gifty.authservice.util.RequestUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -47,9 +48,27 @@ public class TokenController {
      *          Örneğin, bir frontend uygulaması access token'ı doğrulamadan önce bu endpoint'i çağırabilir.
      */
     @GetMapping("/validate")
-    public ResponseEntity<?> validateToken(@RequestHeader("Authorization") String accessToken) {
+    public ResponseEntity<?> validateAccessToken(@RequestHeader("Authorization") String accessToken) {
         boolean isValid = tokenService.validateAccessToken(accessToken);
         return ResponseEntity.ok(Map.of("valid", isValid));
     }
+
+    @GetMapping("/blacklist-refresh-token")
+    public ResponseEntity<?> blacklistRefreshToken(@RequestHeader("Authorization") String refreshToken) {
+        try {
+            // Refresh token'ı blacklist'e ekle
+            tokenService.blacklistRefreshToken(refreshToken);
+
+            // Başarılı yanıt döndür
+            return ResponseEntity.ok(Map.of("status", "success", "message", "Refresh token blacklisted successfully."));
+        } catch (Exception ex) {
+            // Hata durumunda yanıt döndür
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                    "status", "error",
+                    "message", ex.getMessage()
+            ));
+        }
+    }
+
 
 }

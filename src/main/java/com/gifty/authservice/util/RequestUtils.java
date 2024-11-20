@@ -24,4 +24,14 @@ public class RequestUtils {
         }
         return ip;
     }
+
+    /**
+     * İstemcinin tarayıcı bilgilerini döner.
+     *
+     * @param request HTTP isteği
+     * @return Kullanıcı aracı (User-Agent)
+     */
+    public static String getUserAgent(HttpServletRequest request) {
+        return request.getHeader("User-Agent");
+    }
 }

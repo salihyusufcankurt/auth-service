@@ -6,13 +6,14 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @DiscriminatorColumn(name = "user_type", discriminatorType = DiscriminatorType.STRING)
-@Table(name = "`user`") // Tırnak işaretleriyle 'user' tablosu
+@Table(name = "'user'") // Tırnak işaretleriyle 'user' tablosu
 @Getter
 @Setter
 @JsonTypeInfo(
@@ -26,8 +27,8 @@ import java.util.Map;
 })
 public abstract class User {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private UUID id;
 
     @Column(nullable = false, unique = true)
     private String username;
@@ -41,12 +42,8 @@ public abstract class User {
     @Column(nullable = false)
     public abstract String getType();
 
-    @ElementCollection
-    @Column(nullable = false)
-    private Map<String, String> deviceTokens = new HashMap<>(); // Cihaz ID - Token eşleşmesi
-
-    @Column(nullable = true)
-    private String lastUsedIp; // Son kullanılan IP adresi
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<Device> devices = new HashSet<>(); // Kullanıcının cihazları
 
 
 }

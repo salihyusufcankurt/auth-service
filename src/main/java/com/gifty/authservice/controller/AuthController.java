@@ -47,9 +47,23 @@ public class AuthController {
      */
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginDTO loginDTO, HttpServletRequest request) {
-        User user = authService.login(loginDTO.getUsername(), loginDTO.getPassword());
         String clientIp = RequestUtils.getClientIp(request);
-        Map<String, String> tokens = tokenService.generateTokens(user, loginDTO.getDeviceId(), clientIp);
+        String userAgent = RequestUtils.getUserAgent(request);
+
+        // Eğer `userAgent` boş ise varsayılan bir değer ata
+        if (userAgent == null || userAgent.isEmpty()) {
+            userAgent = "Unknown"; // Varsayılan değer atanır
+        }
+
+        // Giriş yap ve tokenları üret
+        Map<String, String> tokens = authService.login(
+                loginDTO.getUsername(),
+                loginDTO.getPassword(),
+                loginDTO.getDeviceName(),
+                clientIp,
+                userAgent,
+                loginDTO.getLocation()
+        );
         return ResponseEntity.ok(tokens);
     }
 
@@ -61,7 +75,7 @@ public class AuthController {
      */
     @PostMapping("/logout")
     public ResponseEntity<?> logout(@RequestBody Map<String, String> logoutData) {
-        authService.logout(logoutData.get("username"), logoutData.get("deviceId"));
+        authService.logout(logoutData.get("username"), logoutData.get("deviceName"));
         return ResponseEntity.ok("Logout successful.");
     }
 
