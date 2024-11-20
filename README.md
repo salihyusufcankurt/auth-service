@@ -1,5 +1,4 @@
 
-```markdown
 # Auth ve Token Yönetim Sistemi
 
 Bu proje, kullanıcıların kayıt, giriş, çıkış ve token yönetimini sağlayan bir kimlik doğrulama sistemidir. Güvenlik özellikleri arasında refresh token blacklist mekanizması ve token geçersizlik kontrolleri bulunmaktadır.
