@@ -3,18 +3,29 @@ package com.gifty.authservice.service;
 import com.gifty.authservice.exception.*;
 import com.gifty.authservice.model.Admin;
 import com.gifty.authservice.model.Customer;
+import com.gifty.authservice.model.Device;
 import com.gifty.authservice.model.User;
 import com.gifty.authservice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
+
+/**
+ * Kullanıcıların giriş, kayıt ve oturum işlemlerini yöneten servis.
+ */
 @Service
 @RequiredArgsConstructor
 public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final DeviceService deviceService;
+    private final TokenService tokenService;
+
+
 
     /**
      * Kullanıcı kayıt işlemini gerçekleştirir. Kullanıcı adı, e-posta, şifre ve kullanıcı tipi doğrulanır.
@@ -47,44 +58,46 @@ public class AuthService {
     }
 
     /**
-     * Kullanıcı giriş işlemini gerçekleştirir. Kullanıcı adı ve şifre doğrulanır.
+     * Kullanıcı giriş işlemini gerçekleştirir ve cihaz bilgilerini kaydeder veya günceller.
      *
-     * @param username Kullanıcının kullanıcı adı
-     * @param rawPassword Kullanıcının şifresi
-     * @return Doğrulanmış kullanıcı
+     * @param username    Kullanıcı adı
+     * @param rawPassword Şifre
+     * @param deviceName  Cihaz adı
+     * @param ipAddress   IP adresi
+     * @param userAgent   Kullanıcı aracı bilgisi
+     * @param location    Coğrafi konum bilgisi
+     * @return Giriş yapan kullanıcı bilgisi
      */
-    public User login(String username, String rawPassword) {
-        // Kullanıcı adı ile kullanıcıyı bul
+    @Transactional
+    public Map<String, String> login(String username, String rawPassword, String deviceName, String ipAddress, String userAgent, String location) {
+        // Kullanıcıyı bul ve doğrula
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new BadCredentialsCustomException("Invalid username."));
+                .orElseThrow(() -> new IllegalArgumentException("Geçersiz kullanıcı adı veya şifre"));
 
-        // Şifreyi kontrol et
+        // Şifre doğrulaması
         if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
-            throw new BadCredentialsCustomException("Invalid password.");
+            throw new IllegalArgumentException("Geçersiz kullanıcı adı veya şifre");
         }
 
-        return user;
+        // Tokenları oluştur
+        Map<String, String> tokens = tokenService.generateTokens(user, deviceName, ipAddress);
+        String refreshToken = tokens.get("refreshToken");
+
+        // Cihaz bilgilerini kaydet veya güncelle ve refreshToken'ı ekle
+        deviceService.registerOrUpdateDevice(user.getId(), deviceName, ipAddress, userAgent, location, refreshToken);
+
+        return tokens; // Access ve Refresh Token'ları döndür
     }
 
     /**
      * Belirtilen cihaz için kullanıcıyı sistemden çıkarır.
      *
      * @param username Kullanıcının kullanıcı adı
-     * @param deviceId Kullanıcının cihaz kimliği
+     * @param deviceName Kullanıcının cihaz adı
      */
-    public void logout(String username, String deviceId) {
-        // Kullanıcıyı bul
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new SessionNotFoundException("User not found."));
-
-        // Belirtilen cihaz için oturum var mı kontrol et
-        if (!user.getDeviceTokens().containsKey(deviceId)) {
-            throw new SessionNotFoundException("Session not found for the given device.");
-        }
-
-        // Cihazdaki token bilgisini kaldır
-        user.getDeviceTokens().remove(deviceId);
-        userRepository.save(user);
+    @Transactional
+    public void logout(String username, String deviceName) {
+        deviceService.logout(username, deviceName); // Cihaz çıkışını DeviceService üzerinden yönet
     }
 
     /**
@@ -92,14 +105,9 @@ public class AuthService {
      *
      * @param username Kullanıcının kullanıcı adı
      */
+    @Transactional
     public void logoutFromAllDevices(String username) {
-        // Kullanıcıyı bul
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new SessionNotFoundException("User not found."));
-
-        // Tüm cihazlardaki tokenları temizle
-        user.getDeviceTokens().clear();
-        userRepository.save(user);
+        deviceService.logoutFromAllDevices(username); // Tüm cihazlardan çıkışı DeviceService üzerinden yönet
     }
 
     /**

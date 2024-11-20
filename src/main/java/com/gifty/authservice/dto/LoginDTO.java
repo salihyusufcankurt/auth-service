@@ -6,5 +6,7 @@ import lombok.Data;
 public class LoginDTO {
     private String username;
     private String password;
-    private String deviceId;
+    private String deviceName; // Cihaz adı (ör. tarayıcı bilgisi)
+    private String location; // Kullanıcının konum bilgisi
+
 }

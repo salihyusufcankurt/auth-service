@@ -5,68 +5,112 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.util.HashMap;
+import java.time.LocalDateTime;
 import java.util.Map;
 
+/**
+ * Hata yönetimi için merkezi bir sınıf.
+ * Tüm istisnalar burada ele alınır ve standart bir yanıt formatı döndürülür.
+ */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    /**
+     * Genel istisnalar için handler.
+     * Beklenmeyen hatalar bu metod tarafından ele alınır.
+     */
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<?> handleGenericException(Exception ex) {
+        return createErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", ex.getMessage());
+    }
+
+    /**
+     * Oturum bulunamadığında oluşan istisnalar için handler.
+     */
     @ExceptionHandler(SessionNotFoundException.class)
     public ResponseEntity<?> handleSessionNotFoundException(SessionNotFoundException ex) {
-        Map<String, String> errorResponse = new HashMap<>();
-        errorResponse.put("error", "Session Not Found");
-        errorResponse.put("message", "The session for the specified device could not be found. Please check your device ID or log in again.");
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+        return createErrorResponse(HttpStatus.UNAUTHORIZED, "SESSION_NOT_FOUND", ex.getMessage());
     }
 
+    /**
+     * Kullanıcı adı veya şifre hatalı olduğunda oluşan istisnalar için handler.
+     */
     @ExceptionHandler(BadCredentialsCustomException.class)
-    public ResponseEntity<Map<String, String>> handleBadCredentialsException(BadCredentialsCustomException ex) {
-        Map<String, String> response = new HashMap<>();
-        response.put("error", "Unauthorized");
-        response.put("message", "Invalid username or password. Please verify your credentials and try again.");
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    public ResponseEntity<?> handleBadCredentialsException(BadCredentialsCustomException ex) {
+        return createErrorResponse(HttpStatus.UNAUTHORIZED, "BAD_CREDENTIALS", ex.getMessage());
     }
 
+    /**
+     * Kullanıcı zaten mevcut olduğunda oluşan istisnalar için handler.
+     */
     @ExceptionHandler(UserAlreadyExistsException.class)
-    public ResponseEntity<Map<String, String>> handleUserAlreadyExistsException(UserAlreadyExistsException ex) {
-        Map<String, String> response = new HashMap<>();
-        response.put("error", "Conflict");
-        response.put("message", "A user with the same username or email already exists. Please try with different credentials.");
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    public ResponseEntity<?> handleUserAlreadyExistsException(UserAlreadyExistsException ex) {
+        return createErrorResponse(HttpStatus.CONFLICT, "USER_ALREADY_EXISTS", ex.getMessage());
     }
 
+    /**
+     * Geçersiz girişler için handler.
+     */
     @ExceptionHandler(InvalidInputException.class)
-    public ResponseEntity<Map<String, String>> handleInvalidInputException(InvalidInputException ex) {
-        System.out.println("InvalidInputException Caught: " + ex.getMessage());
-        Map<String, String> response = new HashMap<>();
-        response.put("error", "Bad Request");
-        response.put("message", "The input provided is invalid: " + ex.getMessage() + ". Please check the required fields and try again.");
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    public ResponseEntity<?> handleInvalidInputException(InvalidInputException ex) {
+        return createErrorResponse(HttpStatus.BAD_REQUEST, "INVALID_INPUT", ex.getMessage());
     }
 
+    /**
+     * Geçersiz token durumunda oluşan istisnalar için handler.
+     */
     @ExceptionHandler(InvalidTokenException.class)
-    public ResponseEntity<Map<String, String>> handleInvalidTokenException(InvalidTokenException ex) {
-        Map<String, String> response = new HashMap<>();
-        response.put("error", "Invalid Token");
-        response.put("message", "The token provided is invalid. Please obtain a new token or log in again.");
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    public ResponseEntity<?> handleInvalidTokenException(InvalidTokenException ex) {
+        return createErrorResponse(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", ex.getMessage());
     }
 
+    /**
+     * Süresi dolmuş token durumunda oluşan istisnalar için handler.
+     */
     @ExceptionHandler(TokenExpiredException.class)
-    public ResponseEntity<Map<String, String>> handleTokenExpiredException(TokenExpiredException ex) {
-        Map<String, String> response = new HashMap<>();
-        response.put("error", "Token Expired");
-        response.put("message", "The token you are using has expired. Please refresh your token or log in again.");
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    public ResponseEntity<?> handleTokenExpiredException(TokenExpiredException ex) {
+        return createErrorResponse(HttpStatus.UNAUTHORIZED, "TOKEN_EXPIRED", ex.getMessage());
     }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, String>> handleGenericException(Exception ex) {
-        ex.printStackTrace(); // Hata detaylarını logla
-        Map<String, String> response = new HashMap<>();
-        response.put("error", "Internal Server Error");
-        response.put("message", "An unexpected error occurred: " + ex.getMessage());
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+    /**
+     * Blacklist'e alınmış token durumunda oluşan istisnalar için handler.
+     */
+    @ExceptionHandler(TokenBlacklistException.class)
+    public ResponseEntity<?> handleTokenBlacklistException(TokenBlacklistException ex) {
+        return createErrorResponse(HttpStatus.FORBIDDEN, "TOKEN_BLACKLISTED", ex.getMessage());
     }
 
+    /**
+     * Geçersiz refresh token durumunda oluşan istisnalar için handler.
+     */
+    @ExceptionHandler(RefreshTokenInvalidException.class)
+    public ResponseEntity<?> handleRefreshTokenInvalidException(RefreshTokenInvalidException ex) {
+        return createErrorResponse(HttpStatus.UNAUTHORIZED, "REFRESH_TOKEN_INVALID", ex.getMessage());
+    }
+
+    /**
+     * Cihaz bulunamadığında oluşan istisnalar için handler.
+     */
+    @ExceptionHandler(DeviceNotFoundException.class)
+    public ResponseEntity<?> handleDeviceNotFoundException(DeviceNotFoundException ex) {
+        return createErrorResponse(HttpStatus.NOT_FOUND, "DEVICE_NOT_FOUND", ex.getMessage());
+    }
+
+    /**
+     * Hata yanıtını standart bir formatta döndürmek için yardımcı metod.
+     *
+     * @param status     HTTP durumu
+     * @param errorCode  Hata kodu
+     * @param message    Hata mesajı
+     * @return Hata yanıtı
+     */
+    private ResponseEntity<Map<String, Object>> createErrorResponse(HttpStatus status, String errorCode, String message) {
+        Map<String, Object> errorResponse = Map.of(
+                "timestamp", LocalDateTime.now(),
+                "status", status.value(),
+                "error", errorCode,
+                "message", message
+        );
+        return ResponseEntity.status(status).body(errorResponse);
+    }
 }
